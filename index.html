@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f3ef" />
+  <meta name="description" content="Edit photos privately with clikz_edit. Your photos stay on your device." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="clikz_edit" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./app-icon.svg" type="image/svg+xml" />
+  <title>clikz_edit | Photo studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f3ef;
+      --panel: #fbfaf7;
+      --ink: #1d211e;
+      --muted: #888b84;
+      --line: #e4e2dc;
+      --accent: #e76c42;
+      --accent-dark: #c8512d;
+      --green: #577f68;
+      --mono: "DM Mono", monospace;
+      --sans: "Manrope", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 13px; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .app { min-height: 100vh; display: grid; grid-template-rows: 62px minmax(0, 1fr); }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 25px; border-bottom: 1px solid var(--line); background: rgba(251,250,247,.8); }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+    .brand-mark { width: 29px; height: 29px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; color: white; }
+    .brand-mark svg { width: 17px; height: 17px; }
+    .brand-name { font-size: 16px; letter-spacing: -.5px; font-weight: 800; }
+    .brand-name span { color: var(--accent); }
+    .top-center { display: flex; align-items: center; gap: 8px; color: #767970; font-size: 11px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #78a383; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .button { border: 1px solid var(--line); background: transparent; border-radius: 7px; height: 35px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; font-size: 12px; font-weight: 700; transition: background .18s, border-color .18s, transform .18s; }
+    .button:hover:not(:disabled) { background: white; border-color: #c8c5bc; }
+    .button:active:not(:disabled) { transform: translateY(1px); }
+    .button:disabled { opacity: .4; cursor: not-allowed; }
+    .button svg { width: 15px; height: 15px; }
+    .button.primary { color: #fff; background: var(--ink); border-color: var(--ink); }
+    .button.primary:hover:not(:disabled) { background: #343a34; border-color: #343a34; }
+    .layout { display: grid; grid-template-columns: 204px minmax(300px,1fr) 276px; min-height: 0; }
+    .left-panel, .right-panel { background: var(--panel); min-height: calc(100vh - 62px); }
+    .left-panel { border-right: 1px solid var(--line); padding: 19px 14px 15px; display: flex; flex-direction: column; }
+    .right-panel { border-left: 1px solid var(--line); padding: 20px 18px; overflow-y: auto; }
+    .section-label { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: 1px; }
+    .library-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; padding: 0 3px; }
+    .icon-button { border: 0; background: transparent; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: #75786f; cursor: pointer; }
+    .icon-button:hover { background: #efeee9; color: var(--ink); }
+    .icon-button svg { width: 16px; height: 16px; }
+    .photo-list { display: grid; gap: 8px; }
+    .photo-item { position: relative; padding: 5px; border: 1px solid transparent; border-radius: 8px; display: grid; grid-template-columns: 52px minmax(0,1fr); align-items: center; gap: 9px; background: transparent; cursor: pointer; text-align: left; width: 100%; }
+    .photo-item.active { border-color: #ecc2ae; background: #fbf2ec; }
+    .photo-item img { width: 52px; height: 48px; object-fit: cover; border-radius: 5px; background: #e7e5df; }
+    .photo-item-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; }
+    .photo-item-meta { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--mono); }
+    .library-empty { color: #85877f; text-align: center; padding: 27px 10px; font-size: 11px; line-height: 1.7; }
+    .library-empty svg { display: block; margin: 0 auto 10px; color: #aba9a1; width: 24px; height: 24px; }
+    .storage-note { margin-top: auto; padding: 12px 10px; border-top: 1px solid var(--line); color: #888980; font-size: 10px; line-height: 1.6; }
+    .workspace { min-width: 0; padding: 17px 21px 16px; display: grid; grid-template-rows: 34px minmax(260px,1fr) 86px; gap: 14px; }
+    .workbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .image-info { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+    .image-name { max-width: 310px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-weight: 700; }
+    .image-dimensions { color: var(--muted); font: 10px var(--mono); }
+    .workbar-actions { display: flex; align-items: center; gap: 6px; }
+    .tool-button { border: 1px solid transparent; background: transparent; border-radius: 6px; min-width: 34px; height: 32px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; color: #6c7069; font-size: 10px; }
+    .tool-button:hover:not(:disabled), .tool-button.selected { border-color: var(--line); background: var(--panel); color: var(--ink); }
+    .tool-button:disabled { opacity: .4; cursor: not-allowed; }
+    .tool-button svg { width: 15px; height: 15px; }
+    .stage { position: relative; min-height: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid #deddd6; border-radius: 8px; background-color: #eae9e3; background-image: radial-gradient(#d7d6cf 0.7px, transparent .7px); background-size: 14px 14px; }
+    .stage.dragging { outline: 2px solid var(--accent); outline-offset: -5px; }
+    .empty-state { max-width: 320px; text-align: center; padding: 25px; animation: appear .35s ease both; }
+    .empty-icon { width: 57px; height: 57px; margin: 0 auto 16px; display: grid; place-items: center; border: 1px solid #d9d7ce; border-radius: 17px; background: rgba(251,250,247,.8); color: var(--accent); }
+    .empty-icon svg { width: 26px; height: 26px; }
+    .empty-state h1 { font-size: 20px; letter-spacing: -.7px; margin: 0 0 7px; }
+    .empty-state p { margin: 0 0 18px; color: #797c74; line-height: 1.6; font-size: 12px; }
+    .empty-state .button { margin: auto; }
+    #imageFrame { display: none; position: relative; width: fit-content; height: fit-content; max-width: 100%; max-height: 100%; transform-origin: center; box-shadow: 0 12px 35px rgba(36,37,32,.18); }
+    #imageFrame img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+    #focusBackground { position: absolute; inset: 0; z-index: 0; transform: scale(1.04); }
+    #preview { position: relative; z-index: 1; transition: filter .08s linear; }
+    #focusOverlay { display: none; position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+    .vignette { display: none; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 43%, rgba(0,0,0,.48) 100%); }
+    .stage.has-image #imageFrame { display: block; }
+    .stage.has-image .empty-state { display: none; }
+    .stage.has-image .vignette { display: block; }
+    .stage.focus-mode #focusOverlay { display: block; }
+    .stage.focus-mode { cursor: crosshair; }
+    .stage.has-focus:not(.focus-mode) #focusOverlay { display: block; pointer-events: none; }
+    .stage.is-before #focusBackground { display: none; }
+    .stage.is-before #preview { filter: none !important; mask-image: none !important; }
+    .stage.is-before #focusOverlay, .stage.is-before .focus-hint { display: none !important; }
+    .stage.is-before .vignette { display: none; }
+    .stage.has-focus #preview { mask-repeat: no-repeat; mask-position: center; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; -webkit-mask-size: 100% 100%; }
+    .stage.has-focus #focusBackground { display: block; }
+    .focus-hint { display: none; position: absolute; z-index: 3; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 7px 10px; border: 1px solid #ffffff55; border-radius: 5px; background: #1d211ecf; color: white; white-space: nowrap; font: 9px var(--mono); letter-spacing: .4px; pointer-events: none; }
+    .stage.focus-mode .focus-hint { display: block; }
+    .compare-label { display: none; position: absolute; top: 13px; left: 13px; border-radius: 4px; padding: 5px 8px; background: rgba(29,33,30,.78); color: white; font: 9px var(--mono); letter-spacing: .7px; }
+    .stage.is-before .compare-label { display: block; }
+    .filmstrip { min-width: 0; display: grid; grid-template-rows: 25px minmax(0,1fr); gap: 4px; overflow: hidden; padding: 1px; }
+    .filmstrip-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .filter-tabs { display: inline-flex; align-items: center; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: rgba(251,250,247,.75); }
+    .filter-tab { height: 21px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; color: #777a72; cursor: pointer; font-size: 9px; font-weight: 700; }
+    .filter-tab.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(29,33,30,.1); }
+    .filter-options { min-width: 0; display: flex; align-items: stretch; gap: 9px; overflow-x: auto; padding-bottom: 5px; }
+    .preset[hidden] { display: none; }
+    .preset { flex: 0 0 91px; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: 4px; cursor: pointer; text-align: left; }
+    .preset:hover { background: rgba(255,255,255,.45); }
+    .preset.active { border-color: #e9b49a; background: #fbf2ec; }
+    .preset-swatch { display: block; height: 49px; border-radius: 4px; background-size: cover; background-position: center; background-color: #d8d7d0; position: relative; overflow: hidden; }
+    .preset-swatch:after { content: ""; position: absolute; inset: 0; background: var(--swatch-filter,none); }
+    .preset-name { display: block; margin-top: 6px; font-size: 10px; font-weight: 700; }
+    .filmstrip-label { display: flex; align-items: baseline; gap: 8px; padding-left: 2px; color: var(--muted); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+    .filmstrip-label strong { color: var(--ink); font: 700 11px var(--sans); text-transform: none; letter-spacing: 0; }
+    .adjust-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+    .adjust-head h2 { margin: 0; font-size: 14px; letter-spacing: -.3px; }
+    .reset-button { border: 0; padding: 4px 0; background: none; color: #82847c; cursor: pointer; font-size: 10px; }
+    .reset-button:hover { color: var(--accent-dark); }
+    .control-group { padding-top: 17px; }
+    .focus-controls .button { margin-bottom: 14px; }
+    .focus-controls .slider-row { grid-column: span 1; }
+    .focus-controls .auto-focus-button { width: 100%; justify-content: center; }
+    .control-group-title { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; font-size: 11px; font-weight: 800; }
+    .control-group-title svg { width: 14px; height: 14px; color: var(--accent); }
+    .slider-row { margin-bottom: 17px; }
+    .slider-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: #60635c; font-size: 10px; }
+    .slider-value { min-width: 31px; text-align: right; color: #71746c; font: 10px var(--mono); }
+    input[type="range"] { appearance: none; display: block; width: 100%; height: 3px; border-radius: 2px; background: linear-gradient(to right, var(--accent) 50%, #dfded8 50%); outline: none; cursor: pointer; }
+    input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    input[type="range"]::-moz-range-thumb { width: 9px; height: 9px; border: 2px solid white; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .range-scale { display: flex; justify-content: space-between; margin-top: 5px; color: #a4a49c; font: 8px var(--mono); }
+    .right-divider { height: 1px; margin-top: 1px; background: var(--line); }
+    .save-note { margin-top: 20px; padding: 10px; border-radius: 6px; background: #f1f0ea; color: #777a72; font-size: 10px; line-height: 1.6; }
+    .save-note strong { color: #53574f; }
+    #fileInput { display: none; }
+    .toast { position: fixed; z-index: 5; bottom: 22px; left: 50%; transform: translate(-50%, 12px); padding: 10px 15px; border-radius: 7px; background: var(--ink); color: white; box-shadow: 0 7px 24px #1d211e2b; font-size: 11px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (min-width: 1440px) { .layout { grid-template-columns: 224px minmax(300px,1fr) 300px; } .workspace { padding: 20px 27px; } }
+    @media (max-width: 950px) { .layout { grid-template-columns: 170px minmax(280px,1fr); } .right-panel { grid-column: 1 / -1; min-height: auto; border-left: 0; border-top: 1px solid var(--line); padding: 15px 20px 22px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; } .adjust-head { grid-column: 1 / -1; } .control-group { padding-top: 13px; } .save-note { grid-column: 1 / -1; margin-top: 8px; } .left-panel { min-height: 610px; } .workspace { min-height: 610px; } }
+    @media (max-width: 620px) { .app { grid-template-rows: 55px minmax(0,1fr); } .topbar { padding: 0 13px; } .top-center { display: none; } .button { height: 33px; padding: 0 9px; font-size: 11px; } .button.primary { padding: 0 11px; } .layout { display: flex; flex-direction: column; } .workspace { order: 1; min-height: 0; height: min(70vh, 610px); padding: 11px 12px 12px; grid-template-rows: 32px minmax(210px,1fr) 81px; gap: 10px; } .left-panel { order: 2; min-height: 0; border-top: 1px solid var(--line); border-right: 0; padding: 12px; } .photo-list { grid-template-columns: repeat(auto-fill,minmax(145px,1fr)); } .library-empty { padding: 12px; } .storage-note { display: none; } .right-panel { order: 3; display: block; padding: 15px 17px 21px; } .control-group { display: grid; grid-template-columns: 1fr 1fr; column-gap: 17px; } .control-group-title { grid-column: 1 / -1; } .slider-row { min-width: 0; } .image-name { max-width: 45vw; } .image-dimensions { display: none; } .tool-button { min-width: 31px; padding: 0 5px; } .workbar-actions { gap: 1px; } .filmstrip-label { flex-basis: 71px; } .preset { flex-basis: 78px; } }
+    @media (max-width: 620px) { .workbar-actions .tool-button span { display: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="clikz_edit home">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.3-2h5.4L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg></span>
+        <span class="brand-name">clikz<span>_edit</span></span>
+      </a>
+      <div class="top-center"><span class="status-dot"></span> Edits stay on this device</div>
+      <div class="top-actions">
+        <button class="button" id="installButton" type="button" aria-label="Install clikz_edit" title="Install clikz_edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M10 17h4M12 7v6m-3-3 3 3 3-3"/></svg><span class="install-label">Install</span></button>
+        <button class="button" id="openButton" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Open photos</span></button>
+        <button class="button primary" id="saveButton" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg><span>Save photo</span></button>
+      </div>
+    </header>
+    <input id="fileInput" type="file" accept="image/*" multiple />
+    <main class="layout">
+      <aside class="left-panel">
+        <div class="library-head"><span class="section-label">Your photos <span id="photoCount"></span></span><button class="icon-button" id="addButton" type="button" aria-label="Add photos" title="Add photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="photo-list" id="photoList"><div class="library-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>Your selected photos<br />will appear here.</div></div>
+        <div class="storage-note">Private by design. Photos are opened from your device and never uploaded.</div>
+      </aside>
+      <section class="workspace" aria-label="Photo workspace">
+        <div class="workbar">
+          <div class="image-info"><span class="image-name" id="imageName">Untitled edit</span><span class="image-dimensions" id="imageDimensions"></span></div>
+          <div class="workbar-actions">
+            <button class="tool-button" id="compareButton" type="button" title="Hold to compare with original" aria-label="Compare with original" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M4 7h5v10H4zM15 7h5v10h-5z"/></svg><span>Before</span></button>
+            <button class="tool-button" id="enhanceButton" type="button" title="Boost color and detail; export up to 6K" aria-label="Enhance photo and export up to 6K" aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15ZM5 3l.7 1.3L7 5l-1.3.7L5 7l-.7-1.3L3 5l1.3-.7L5 3Z"/></svg><span>Enhance</span></button>
+            <button class="tool-button" id="focusButton" type="button" title="Paint the subject to keep it sharp" aria-label="Portrait focus brush" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg><span>Focus</span></button>
+            <button class="tool-button" id="rotateButton" type="button" title="Rotate photo" aria-label="Rotate photo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/></svg></button>
+          </div>
+        </div>
+        <div class="stage" id="stage">
+          <div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg></div><h1>Make the shot yours.</h1><p>Choose a photo from your device to start editing.</p><button class="button" id="emptyOpenButton" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Choose a photo</button></div>
+          <div id="imageFrame"><img id="focusBackground" alt="" aria-hidden="true" /><img id="preview" alt="Photo preview" /><canvas id="focusOverlay" aria-label="Paint the subject to keep it in focus"></canvas></div>
+          <div class="vignette"></div><span class="compare-label">ORIGINAL</span><span class="focus-hint">PAINT OVER THE SUBJECT TO KEEP IT SHARP</span>
+        </div>
+        <div class="filmstrip" id="filmstrip">
+          <div class="filmstrip-heading">
+            <div class="filmstrip-label"><strong id="filterGroupTitle">Looks</strong><span id="filterGroupDescription">quick color grades</span></div>
+            <div class="filter-tabs" role="tablist" aria-label="Filter groups">
+              <button class="filter-tab" type="button" data-filter-group="color" role="tab" aria-selected="false">Color</button>
+              <button class="filter-tab active" type="button" data-filter-group="looks" role="tab" aria-selected="true">Looks</button>
+            </div>
+          </div>
+          <div class="filter-options" id="filterOptions">
+            <button class="preset active" type="button" data-filter-group="looks" data-preset="original"><span class="preset-swatch"></span><span class="preset-name">Original</span></button>
+            <button class="preset" type="button" data-filter-group="looks" data-preset="portrait"><span class="preset-swatch" style="--swatch-filter:linear-gradient(0deg,#d7814b33,#f3d7a244),saturate(1.13)"></span><span class="preset-name">Portrait</span></button>
+            <button class="preset" type="button" data-filter-group="looks" data-preset="golden"><span class="preset-swatch" style="--swatch-filter:linear-gradient(0deg,#f4a74755,#f7d56d33)"></span><span class="preset-name">Golden</span></button>
+            <button class="preset" type="button" data-filter-group="looks" data-preset="mono"><span class="preset-swatch" style="--swatch-filter:grayscale(1) contrast(1.08)"></span><span class="preset-name">Mono</span></button>
+            <button class="preset" type="button" data-filter-group="looks" data-preset="film"><span class="preset-swatch" style="--swatch-filter:sepia(.16) contrast(.94) saturate(.8)"></span><span class="preset-name">Film</span></button>
+            <button class="preset" type="button" data-filter-group="looks" data-preset="vivid"><span class="preset-swatch" style="--swatch-filter:saturate(1.4) contrast(1.08)"></span><span class="preset-name">Vivid</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-standard"><span class="preset-swatch" style="--swatch-filter:saturate(1.12) contrast(1.06)"></span><span class="preset-name">Standard</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-portrait"><span class="preset-swatch" style="--swatch-filter:sepia(.12) saturate(1.05) brightness(1.03)"></span><span class="preset-name">Portrait</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-landscape"><span class="preset-swatch" style="--swatch-filter:saturate(1.3) contrast(1.12) hue-rotate(-5deg)"></span><span class="preset-name">Landscape</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-neutral"><span class="preset-swatch" style="--swatch-filter:saturate(.9) contrast(.92)"></span><span class="preset-name">Neutral</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-faithful"><span class="preset-swatch" style="--swatch-filter:saturate(.94) contrast(1.02) sepia(.04)"></span><span class="preset-name">Faithful</span></button>
+            <button class="preset" type="button" data-filter-group="color" data-preset="canon-monochrome"><span class="preset-swatch" style="--swatch-filter:grayscale(1) contrast(1.12)"></span><span class="preset-name">Monochrome</span></button>
+          </div>
+        </div>
+      </section>
+      <aside class="right-panel">
+        <div class="adjust-head"><h2>Adjustments</h2><button class="reset-button" id="resetButton" type="button">Reset all</button></div>
+        <div class="control-group">
+          <div class="control-group-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Light</div>
+          <div class="slider-row"><div class="slider-heading"><label for="exposure">Exposure</label><output class="slider-value" id="exposureValue">0</output></div><input id="exposure" type="range" min="-100" max="100" value="0" data-unit=""/><div class="range-scale"><span>-2 EV</span><span>+2 EV</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="contrast">Contrast</label><output class="slider-value" id="contrastValue">0</output></div><input id="contrast" type="range" min="-50" max="50" value="0" data-unit=""/><div class="range-scale"><span>Soft</span><span>Strong</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="highlights">Highlights</label><output class="slider-value" id="highlightsValue">0</output></div><input id="highlights" type="range" min="-100" max="100" value="0" data-unit=""/><div class="range-scale"><span>Lower</span><span>Lift</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="shadows">Shadows</label><output class="slider-value" id="shadowsValue">0</output></div><input id="shadows" type="range" min="-100" max="100" value="0" data-unit=""/><div class="range-scale"><span>Deeper</span><span>Open</span></div></div>
+        </div>
+        <div class="right-divider"></div>
+        <div class="control-group">
+          <div class="control-group-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a9 9 0 1 0 9 9c0-1.1-.9-2-2-2h-1.4a1.6 1.6 0 0 1-1.3-2.5A2 2 0 0 0 14.7 4 8.9 8.9 0 0 0 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/></svg>Color &amp; detail</div>
+          <div class="slider-row"><div class="slider-heading"><label for="saturation">Saturation</label><output class="slider-value" id="saturationValue">0</output></div><input id="saturation" type="range" min="-100" max="100" value="0" data-unit=""/><div class="range-scale"><span>Muted</span><span>Vivid</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="warmth">Warmth</label><output class="slider-value" id="warmthValue">0</output></div><input id="warmth" type="range" min="-100" max="100" value="0" data-unit=""/><div class="range-scale"><span>Cool</span><span>Warm</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="vignetteAmount">Vignette</label><output class="slider-value" id="vignetteAmountValue">0</output></div><input id="vignetteAmount" type="range" min="0" max="100" value="0" data-unit=""/><div class="range-scale"><span>Off</span><span>More</span></div></div>
+        </div>
+        <div class="right-divider"></div>
+        <div class="control-group focus-controls">
+          <div class="control-group-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>Portrait focus</div>
+          <button class="button auto-focus-button" id="autoFocusButton" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="M19 15v6m-3-3h6"/></svg><span>Auto-select subject</span></button>
+          <div class="slider-row"><div class="slider-heading"><label for="focusBlur">Background blur</label><output class="slider-value" id="focusBlurValue">55</output></div><input id="focusBlur" type="range" min="0" max="100" value="55"/><div class="range-scale"><span>Off</span><span>Strong</span></div></div>
+          <div class="slider-row"><div class="slider-heading"><label for="focusBrush">Brush size</label><output class="slider-value" id="focusBrushValue">48</output></div><input id="focusBrush" type="range" min="12" max="120" value="48"/><div class="range-scale"><span>Small</span><span>Large</span></div></div>
+          <button class="button" id="clearFocusButton" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16m-10 4v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Clear selection</button>
+        </div>
+        <div class="save-note"><strong>Full-size export.</strong> Your original stays untouched. Save photo downloads the edited image as a PNG.</div>
+      </aside>
+    </main>
+  </div>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><filter id="enhance-detail"><feConvolveMatrix order="3" kernelMatrix="0 -0.35 0 -0.35 2.4 -0.35 0 -0.35 0" preserveAlpha="true"/></filter></svg>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (() => {
+      const fileInput = document.querySelector('#fileInput');
+      const photoList = document.querySelector('#photoList');
+      const stage = document.querySelector('#stage');
+      const preview = document.querySelector('#preview');
+      const imageFrame = document.querySelector('#imageFrame');
+      const focusBackground = document.querySelector('#focusBackground');
+      const focusOverlay = document.querySelector('#focusOverlay');
+      const focusOverlayContext = focusOverlay.getContext('2d');
+      const focusMask = document.createElement('canvas');
+      const focusMaskContext = focusMask.getContext('2d');
+      const saveButton = document.querySelector('#saveButton');
+      const compareButton = document.querySelector('#compareButton');
+      const enhanceButton = document.querySelector('#enhanceButton');
+      const focusButton = document.querySelector('#focusButton');
+      const autoFocusButton = document.querySelector('#autoFocusButton');
+      const clearFocusButton = document.querySelector('#clearFocusButton');
+      const toast = document.querySelector('#toast');
+      const installButton = document.querySelector('#installButton');
+      const sliderNames = ['exposure', 'contrast', 'highlights', 'shadows', 'saturation', 'warmth', 'vignetteAmount'];
+      const defaults = Object.fromEntries(sliderNames.map(name => [name, 0]));
+      const presets = {
+        original: {},
+        portrait: { exposure: 5, contrast: -5, highlights: -14, shadows: 14, saturation: 10, warmth: 12, vignetteAmount: 8 },
+        golden: { exposure: 7, contrast: 4, highlights: -18, shadows: 10, saturation: 12, warmth: 38, vignetteAmount: 14 },
+        mono: { exposure: 2, contrast: 15, highlights: -8, shadows: 4, saturation: -100, warmth: 0, vignetteAmount: 15 },
+        film: { exposure: 4, contrast: -11, highlights: -16, shadows: 12, saturation: -20, warmth: 9, vignetteAmount: 18 },
+        vivid: { exposure: 2, contrast: 12, highlights: -10, shadows: 8, saturation: 32, warmth: 2, vignetteAmount: 5 },
+        'canon-standard': { exposure: 1, contrast: 7, highlights: -7, shadows: 4, saturation: 10, warmth: 2, vignetteAmount: 0 },
+        'canon-portrait': { exposure: 4, contrast: -7, highlights: -12, shadows: 15, saturation: 5, warmth: 9, vignetteAmount: 3 },
+        'canon-landscape': { exposure: 2, contrast: 12, highlights: -18, shadows: 5, saturation: 24, warmth: -5, vignetteAmount: 2 },
+        'canon-neutral': { exposure: 0, contrast: -12, highlights: -8, shadows: 8, saturation: -12, warmth: 0, vignetteAmount: 0 },
+        'canon-faithful': { exposure: 1, contrast: -3, highlights: -10, shadows: 7, saturation: -5, warmth: 1, vignetteAmount: 0 },
+        'canon-monochrome': { exposure: 2, contrast: 16, highlights: -12, shadows: 8, saturation: -100, warmth: 0, vignetteAmount: 5 }
+      };
+      const photos = [];
+      let activePhoto = null;
+      let rotation = 0;
+      let toastTimer;
+      let installPrompt = null;
+      let hasFocusSelection = false;
+      let focusMaskDirty = true;
+      let focusMaskUrl = '';
+      let paintingFocus = false;
+      let previousFocusPoint = null;
+      let enhanceMode = false;
+      let subjectSegmenterPromise = null;
+
+      if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      }
+      if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+        installButton.hidden = true;
+      }
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        installPrompt = event;
+      });
+      window.addEventListener('appinstalled', () => {
+        installButton.hidden = true;
+        showToast('clikz_edit installed on this device.');
+      });
+      installButton.addEventListener('click', async () => {
+        if (installPrompt) {
+          installPrompt.prompt();
+          await installPrompt.userChoice;
+          installPrompt = null;
+          return;
+        }
+        showToast(/iphone|ipad|ipod/i.test(navigator.userAgent)
+          ? 'In Safari, tap Share, then Add to Home Screen.'
+          : 'Open your browser menu and choose Install app or Add to Home Screen.');
+      });
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+      }
+
+      function values() {
+        return Object.fromEntries(sliderNames.map(name => [name, Number(document.querySelector(`#${name}`).value)]));
+      }
+
+      function setValues(next) {
+        sliderNames.forEach(name => {
+          const input = document.querySelector(`#${name}`);
+          input.value = next[name] ?? 0;
+          updateSlider(input);
+        });
+        applyAdjustments();
+      }
+
+      function updateSlider(input) {
+        const min = Number(input.min);
+        const max = Number(input.max);
+        const value = Number(input.value);
+        const center = (0 - min) / (max - min) * 100;
+        const position = (value - min) / (max - min) * 100;
+        const start = value < 0 ? position : center;
+        const end = value < 0 ? center : position;
+        input.style.background = `linear-gradient(to right, #dfded8 0%, #dfded8 ${start}%, #e76c42 ${start}%, #e76c42 ${end}%, #dfded8 ${end}%, #dfded8 100%)`;
+        document.querySelector(`#${input.id}Value`).value = `${value > 0 ? '+' : ''}${value}`;
+      }
+
+      function applyAdjustments() {
+        const edit = values();
+        const ev = edit.exposure / 50;
+        const contrast = 1 + edit.contrast / 100;
+        const saturation = 1 + edit.saturation / 100;
+        const warmth = edit.warmth / 180;
+        const detailFilter = enhanceMode ? 'url(#enhance-detail) ' : '';
+        preview.style.filter = `${detailFilter}brightness(${Math.pow(2, ev) * (enhanceMode ? 1.015 : 1)}) contrast(${contrast * (enhanceMode ? 1.08 : 1)}) saturate(${saturation * (enhanceMode ? 1.1 : 1)}) sepia(${Math.abs(warmth)}) hue-rotate(${warmth < 0 ? 205 : 0}deg)`;
+        document.querySelector('.vignette').style.background = `radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,${edit.vignetteAmount / 185}) 100%)`;
+        renderFocusPreview();
+      }
+
+      function configureFocusMask() {
+        if (!preview.naturalWidth || !preview.naturalHeight) return;
+        const scale = Math.min(1, 1600 / Math.max(preview.naturalWidth, preview.naturalHeight));
+        focusMask.width = Math.max(1, Math.round(preview.naturalWidth * scale));
+        focusMask.height = Math.max(1, Math.round(preview.naturalHeight * scale));
+        focusOverlay.width = focusMask.width;
+        focusOverlay.height = focusMask.height;
+        clearFocusSelection();
+      }
+
+      async function createSubjectSegmenter() {
+        if (!subjectSegmenterPromise) {
+          subjectSegmenterPromise = (async () => {
+            const { FilesetResolver, ImageSegmenter } = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs');
+            const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm');
+            return ImageSegmenter.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite',
+                delegate: 'CPU'
+              },
+              runningMode: 'IMAGE',
+              outputCategoryMask: true,
+              outputConfidenceMasks: false
+            });
+          })().catch(error => {
+            subjectSegmenterPromise = null;
+            throw error;
+          });
+        }
+        return subjectSegmenterPromise;
+      }
+
+      async function autoSelectSubject() {
+        if (!activePhoto || !preview.complete) return;
+        const photo = activePhoto;
+        const label = autoFocusButton.querySelector('span');
+        autoFocusButton.disabled = true;
+        label.textContent = 'Detecting subject...';
+        try {
+          const segmenter = await createSubjectSegmenter();
+          if (photo !== activePhoto) return;
+          const result = segmenter.segment(preview);
+          const categoryMask = result.categoryMask;
+          if (!categoryMask) {
+            result.close();
+            showToast('No subject found. You can select it with the brush.');
+            return;
+          }
+          const categories = categoryMask.getAsUint8Array().slice();
+          const maskWidth = categoryMask.width;
+          const maskHeight = categoryMask.height;
+          const labels = segmenter.getLabels();
+          result.close();
+          const counts = new Uint32Array(Math.max(labels.length, 256));
+          categories.forEach(category => { if (category > 0) counts[category]++; });
+          let selectedCategory = -1;
+          for (let category = 1; category < counts.length; category++) {
+            if (counts[category] > (selectedCategory < 0 ? 0 : counts[selectedCategory])) selectedCategory = category;
+          }
+          if (selectedCategory < 0 || counts[selectedCategory] < Math.max(12, categories.length * .002)) {
+            showToast('No clear subject found. You can select it with the brush.');
+            return;
+          }
+          const subjectName = labels[selectedCategory] || 'subject';
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = maskWidth;
+          maskCanvas.height = maskHeight;
+          const maskContext = maskCanvas.getContext('2d');
+          const maskPixels = maskContext.createImageData(maskWidth, maskHeight);
+          const overlayCanvas = document.createElement('canvas');
+          overlayCanvas.width = maskWidth;
+          overlayCanvas.height = maskHeight;
+          const overlayContext = overlayCanvas.getContext('2d');
+          const overlayPixels = overlayContext.createImageData(maskWidth, maskHeight);
+          for (let y = 0; y < maskHeight; y++) {
+            for (let x = 0; x < maskWidth; x++) {
+              const sourceIndex = y * maskWidth + x;
+              const outputIndex = sourceIndex * 4;
+              const alpha = categories[sourceIndex] === selectedCategory ? 255 : 0;
+              maskPixels.data[outputIndex] = 255;
+              maskPixels.data[outputIndex + 1] = 255;
+              maskPixels.data[outputIndex + 2] = 255;
+              maskPixels.data[outputIndex + 3] = alpha;
+              overlayPixels.data[outputIndex] = 87;
+              overlayPixels.data[outputIndex + 1] = 127;
+              overlayPixels.data[outputIndex + 2] = 104;
+              overlayPixels.data[outputIndex + 3] = Math.round(alpha * .52);
+            }
+          }
+          maskContext.putImageData(maskPixels, 0, 0);
+          overlayContext.putImageData(overlayPixels, 0, 0);
+          focusMaskContext.clearRect(0, 0, focusMask.width, focusMask.height);
+          focusMaskContext.imageSmoothingEnabled = true;
+          focusMaskContext.imageSmoothingQuality = 'high';
+          focusMaskContext.filter = 'blur(1.5px)';
+          focusMaskContext.drawImage(maskCanvas, 0, 0, focusMask.width, focusMask.height);
+          focusMaskContext.filter = 'none';
+          focusOverlayContext.clearRect(0, 0, focusOverlay.width, focusOverlay.height);
+          focusOverlayContext.imageSmoothingEnabled = true;
+          focusOverlayContext.filter = 'blur(1.5px)';
+          focusOverlayContext.drawImage(overlayCanvas, 0, 0, focusOverlay.width, focusOverlay.height);
+          focusOverlayContext.filter = 'none';
+          hasFocusSelection = true;
+          focusMaskDirty = true;
+          clearFocusButton.disabled = false;
+          stage.classList.remove('focus-mode');
+          focusButton.classList.remove('selected');
+          renderFocusPreview();
+          showToast(`${subjectName[0].toUpperCase()}${subjectName.slice(1)} selected. Adjust blur or use the brush to refine the edge.`);
+        } catch (error) {
+          console.error('Subject segmentation failed:', error);
+          showToast('Auto-select needs an internet connection. Try again or use the brush.');
+        } finally {
+          label.textContent = 'Auto-select subject';
+          autoFocusButton.disabled = !activePhoto;
+        }
+      }
+
+      function clearFocusSelection() {
+        focusMaskContext.clearRect(0, 0, focusMask.width, focusMask.height);
+        focusOverlayContext.clearRect(0, 0, focusOverlay.width, focusOverlay.height);
+        hasFocusSelection = false;
+        focusMaskDirty = true;
+        focusMaskUrl = '';
+        clearFocusButton.disabled = true;
+        renderFocusPreview();
+      }
+
+      function renderFocusPreview() {
+        if (!preview.naturalWidth) return;
+        const blurStrength = Number(document.querySelector('#focusBlur').value);
+        if (hasFocusSelection && focusMaskDirty) {
+          focusMaskUrl = focusMask.toDataURL('image/png');
+          focusMaskDirty = false;
+        }
+        const hasBlur = hasFocusSelection && blurStrength > 0;
+        stage.classList.toggle('has-focus', hasBlur);
+        if (hasBlur) {
+          preview.style.maskImage = `url("${focusMaskUrl}")`;
+          preview.style.webkitMaskImage = `url("${focusMaskUrl}")`;
+          const blurPixels = Math.min(imageFrame.clientWidth, imageFrame.clientHeight) * .12 * blurStrength / 100;
+          focusBackground.style.filter = `${preview.style.filter} blur(${blurPixels}px)`;
+        } else {
+          preview.style.maskImage = 'none';
+          preview.style.webkitMaskImage = 'none';
+        }
+      }
+
+      function focusPoint(event) {
+        const bounds = focusOverlay.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return null;
+        const x = (event.clientX - bounds.left) / bounds.width;
+        const y = (event.clientY - bounds.top) / bounds.height;
+        let sourceX = x;
+        let sourceY = y;
+        if (rotation === 90) { sourceX = y; sourceY = 1 - x; }
+        if (rotation === 180) { sourceX = 1 - x; sourceY = 1 - y; }
+        if (rotation === 270) { sourceX = 1 - y; sourceY = x; }
+        const unrotatedWidth = rotation % 180 ? bounds.height : bounds.width;
+        const radius = Number(document.querySelector('#focusBrush').value) * focusMask.width / unrotatedWidth / 2;
+        return {
+          x: Math.max(0, Math.min(focusMask.width, sourceX * focusMask.width)),
+          y: Math.max(0, Math.min(focusMask.height, sourceY * focusMask.height)),
+          radius
+        };
+      }
+
+      function paintFocus(point, previous) {
+        if (previous) {
+          focusMaskContext.beginPath();
+          focusMaskContext.moveTo(previous.x, previous.y);
+          focusMaskContext.lineTo(point.x, point.y);
+          focusMaskContext.lineWidth = point.radius * 2;
+          focusMaskContext.lineCap = 'round';
+          focusMaskContext.strokeStyle = '#fff';
+          focusMaskContext.stroke();
+          focusOverlayContext.beginPath();
+          focusOverlayContext.moveTo(previous.x, previous.y);
+          focusOverlayContext.lineTo(point.x, point.y);
+          focusOverlayContext.lineWidth = point.radius * 2;
+          focusOverlayContext.lineCap = 'round';
+          focusOverlayContext.strokeStyle = 'rgba(87,127,104,.42)';
+          focusOverlayContext.stroke();
+        } else {
+          focusMaskContext.beginPath();
+          focusMaskContext.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+          focusMaskContext.fillStyle = '#fff';
+          focusMaskContext.fill();
+          focusOverlayContext.beginPath();
+          focusOverlayContext.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+          focusOverlayContext.fillStyle = 'rgba(87,127,104,.42)';
+          focusOverlayContext.fill();
+        }
+        hasFocusSelection = true;
+        focusMaskDirty = true;
+        clearFocusButton.disabled = false;
+        renderFocusPreview();
+      }
+
+      function markPreset(name) {
+        document.querySelectorAll('.preset').forEach(button => button.classList.toggle('active', button.dataset.preset === name));
+      }
+
+      function setFilterGroup(group) {
+        document.querySelectorAll('.filter-tab').forEach(button => {
+          const selected = button.dataset.filterGroup === group;
+          button.classList.toggle('active', selected);
+          button.setAttribute('aria-selected', String(selected));
+        });
+        document.querySelectorAll('.preset').forEach(button => {
+          button.hidden = button.dataset.filterGroup !== group;
+        });
+        document.querySelector('#filterGroupTitle').textContent = group === 'color' ? 'Color' : 'Looks';
+        document.querySelector('#filterGroupDescription').textContent = group === 'color' ? 'camera-inspired color styles' : 'quick color grades';
+      }
+
+      setFilterGroup('looks');
+
+      function addFiles(files) {
+        const images = [...files].filter(file => file.type.startsWith('image/'));
+        if (!images.length) {
+          showToast('Choose an image file to get started.');
+          return;
+        }
+        images.forEach(file => {
+          const photo = { file, url: URL.createObjectURL(file), name: file.name, width: 0, height: 0 };
+          const image = new Image();
+          image.onload = () => { photo.width = image.naturalWidth; photo.height = image.naturalHeight; };
+          image.src = photo.url;
+          photos.push(photo);
+        });
+        renderPhotoList();
+        selectPhoto(photos.length - images.length);
+      }
+
+      function renderPhotoList() {
+        document.querySelector('#photoCount').textContent = photos.length ? `(${photos.length})` : '';
+        photoList.replaceChildren();
+        if (!photos.length) {
+          const empty = document.createElement('div');
+          empty.className = 'library-empty';
+          empty.textContent = 'Your selected photos will appear here.';
+          photoList.append(empty);
+          return;
+        }
+        photos.forEach((photo, index) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = `photo-item${photo === activePhoto ? ' active' : ''}`;
+          button.setAttribute('aria-label', `Edit ${photo.name}`);
+          button.innerHTML = `<img src="${photo.url}" alt=""><span><span class="photo-item-name"></span><span class="photo-item-meta">${photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Photo'}</span></span>`;
+          button.querySelector('.photo-item-name').textContent = photo.name;
+          button.addEventListener('click', () => selectPhoto(index));
+          photoList.append(button);
+        });
+      }
+
+      function selectPhoto(index) {
+        const photo = photos[index];
+        if (!photo) return;
+        activePhoto = photo;
+        rotation = 0;
+        preview.src = photo.url;
+        focusBackground.src = photo.url;
+        preview.alt = photo.name;
+        imageFrame.style.transform = '';
+        stage.classList.add('has-image');
+        stage.classList.remove('focus-mode');
+        focusButton.classList.remove('selected');
+        document.querySelector('#imageName').textContent = photo.name;
+        document.querySelector('#imageDimensions').textContent = photo.width && photo.height ? `${photo.width} × ${photo.height}` : '';
+        saveButton.disabled = false;
+        compareButton.disabled = false;
+        enhanceMode = false;
+        enhanceButton.disabled = false;
+        enhanceButton.classList.remove('selected');
+        enhanceButton.setAttribute('aria-pressed', 'false');
+        focusButton.disabled = false;
+        autoFocusButton.disabled = false;
+        document.querySelector('#rotateButton').disabled = false;
+        clearFocusSelection();
+        setValues(defaults);
+        markPreset('original');
+        renderPhotoList();
+      }
+
+      preview.addEventListener('load', configureFocusMask);
+
+      document.querySelectorAll('input[type="range"]').forEach(input => {
+        updateSlider(input);
+        input.addEventListener('input', () => {
+          updateSlider(input);
+          applyAdjustments();
+          markPreset('');
+        });
+      });
+      document.querySelectorAll('.preset').forEach(button => button.addEventListener('click', () => {
+        setValues(presets[button.dataset.preset] || defaults);
+        markPreset(button.dataset.preset);
+      }));
+      document.querySelectorAll('.filter-tab').forEach(button => button.addEventListener('click', () => setFilterGroup(button.dataset.filterGroup)));
+      document.querySelector('#resetButton').addEventListener('click', () => {
+        setValues(defaults);
+        document.querySelector('#focusBlur').value = 55;
+        updateSlider(document.querySelector('#focusBlur'));
+        enhanceMode = false;
+        enhanceButton.classList.remove('selected');
+        enhanceButton.setAttribute('aria-pressed', 'false');
+        stage.classList.remove('focus-mode');
+        focusButton.classList.remove('selected');
+        clearFocusSelection();
+        markPreset('original');
+      });
+
+      enhanceButton.addEventListener('click', () => {
+        enhanceMode = !enhanceMode;
+        enhanceButton.classList.toggle('selected', enhanceMode);
+        enhanceButton.setAttribute('aria-pressed', String(enhanceMode));
+        applyAdjustments();
+        showToast(enhanceMode ? 'Enhance on. Export will be sized to 6K.' : 'Enhance off.');
+      });
+
+      focusButton.addEventListener('click', () => {
+        const enabled = stage.classList.toggle('focus-mode');
+        focusButton.classList.toggle('selected', enabled);
+        if (enabled) showToast('Brush over the subject to keep it sharp.');
+      });
+      autoFocusButton.addEventListener('click', autoSelectSubject);
+      clearFocusButton.addEventListener('click', clearFocusSelection);
+      focusOverlay.addEventListener('pointerdown', event => {
+        if (!stage.classList.contains('focus-mode')) return;
+        event.preventDefault();
+        focusOverlay.setPointerCapture(event.pointerId);
+        paintingFocus = true;
+        previousFocusPoint = null;
+        const point = focusPoint(event);
+        if (point) paintFocus(point, null);
+      });
+      focusOverlay.addEventListener('pointermove', event => {
+        if (!paintingFocus) return;
+        const point = focusPoint(event);
+        if (point) paintFocus(point, previousFocusPoint);
+        previousFocusPoint = point;
+      });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => focusOverlay.addEventListener(name, () => {
+        paintingFocus = false;
+        previousFocusPoint = null;
+      }));
+
+      const openPicker = () => fileInput.click();
+      document.querySelector('#openButton').addEventListener('click', openPicker);
+      document.querySelector('#addButton').addEventListener('click', openPicker);
+      document.querySelector('#emptyOpenButton').addEventListener('click', openPicker);
+      fileInput.addEventListener('change', event => {
+        addFiles(event.target.files);
+        event.target.value = '';
+      });
+
+      stage.addEventListener('dragover', event => { event.preventDefault(); stage.classList.add('dragging'); });
+      stage.addEventListener('dragleave', event => { if (!stage.contains(event.relatedTarget)) stage.classList.remove('dragging'); });
+      stage.addEventListener('drop', event => {
+        event.preventDefault();
+        stage.classList.remove('dragging');
+        addFiles(event.dataTransfer.files);
+      });
+
+      compareButton.addEventListener('pointerdown', () => stage.classList.add('is-before'));
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(name => compareButton.addEventListener(name, () => stage.classList.remove('is-before')));
+      compareButton.addEventListener('keydown', event => {
+        if (event.key === ' ' || event.key === 'Enter') stage.classList.add('is-before');
+      });
+      compareButton.addEventListener('keyup', () => stage.classList.remove('is-before'));
+
+      document.querySelector('#rotateButton').addEventListener('click', () => {
+        rotation = (rotation + 90) % 360;
+        imageFrame.style.transform = `rotate(${rotation}deg)`;
+      });
+
+      saveButton.addEventListener('click', () => {
+        if (!activePhoto) return;
+        const source = new Image();
+        source.onload = () => {
+          const edit = values();
+          const sideways = rotation % 180 !== 0;
+          const exportScale = enhanceMode ? Math.max(1, 6144 / Math.max(source.naturalWidth, source.naturalHeight)) : 1;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round((sideways ? source.naturalHeight : source.naturalWidth) * exportScale);
+          canvas.height = Math.round((sideways ? source.naturalWidth : source.naturalHeight) * exportScale);
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.imageSmoothingQuality = enhanceMode ? 'high' : 'low';
+          context.translate(canvas.width / 2, canvas.height / 2);
+          context.rotate(rotation * Math.PI / 180);
+          context.drawImage(source, -source.naturalWidth * exportScale / 2, -source.naturalHeight * exportScale / 2, source.naturalWidth * exportScale, source.naturalHeight * exportScale);
+          let outputCanvas = canvas;
+          let outputContext = context;
+          const focusStrength = Number(document.querySelector('#focusBlur').value);
+          if (hasFocusSelection && focusStrength > 0) {
+            context.save();
+            context.globalCompositeOperation = 'destination-in';
+            context.filter = `blur(${Math.min(canvas.width, canvas.height) * .003}px)`;
+            context.drawImage(focusMask, -source.naturalWidth * exportScale / 2, -source.naturalHeight * exportScale / 2, source.naturalWidth * exportScale, source.naturalHeight * exportScale);
+            context.restore();
+
+            const backgroundCanvas = document.createElement('canvas');
+            backgroundCanvas.width = canvas.width;
+            backgroundCanvas.height = canvas.height;
+            const backgroundContext = backgroundCanvas.getContext('2d');
+            backgroundContext.filter = `blur(${Math.min(canvas.width, canvas.height) * .06 * focusStrength / 100}px)`;
+            backgroundContext.translate(canvas.width / 2, canvas.height / 2);
+            backgroundContext.rotate(rotation * Math.PI / 180);
+            backgroundContext.scale(1.035, 1.035);
+            backgroundContext.drawImage(source, -source.naturalWidth * exportScale / 2, -source.naturalHeight * exportScale / 2, source.naturalWidth * exportScale, source.naturalHeight * exportScale);
+            backgroundContext.setTransform(1, 0, 0, 1, 0, 0);
+            backgroundContext.filter = 'none';
+            backgroundContext.drawImage(canvas, 0, 0);
+            outputCanvas = backgroundCanvas;
+            outputContext = backgroundContext;
+          }
+          const frame = outputContext.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+          const pixels = frame.data;
+          const exposure = Math.pow(2, edit.exposure / 50) * (enhanceMode ? 1.015 : 1);
+          const contrast = (1 + edit.contrast / 100) * (enhanceMode ? 1.08 : 1);
+          const saturation = (1 + edit.saturation / 100) * (enhanceMode ? 1.1 : 1);
+          const warmth = edit.warmth * 0.38;
+          const highlights = edit.highlights / 100;
+          const shadows = edit.shadows / 100;
+          const detailSource = enhanceMode ? new Uint8ClampedArray(pixels) : null;
+          const stride = outputCanvas.width * 4;
+          for (let y = 0; y < outputCanvas.height; y++) {
+            for (let x = 0; x < outputCanvas.width; x++) {
+              const i = (y * outputCanvas.width + x) * 4;
+              let red = detailSource ? detailSource[i] : pixels[i];
+              let green = detailSource ? detailSource[i + 1] : pixels[i + 1];
+              let blue = detailSource ? detailSource[i + 2] : pixels[i + 2];
+              if (detailSource && x > 0 && x < outputCanvas.width - 1 && y > 0 && y < outputCanvas.height - 1) {
+                red += (red - (detailSource[i - 4] + detailSource[i + 4] + detailSource[i - stride] + detailSource[i + stride]) / 4) * .55;
+                green += (green - (detailSource[i - 3] + detailSource[i + 5] + detailSource[i - stride + 1] + detailSource[i + stride + 1]) / 4) * .55;
+                blue += (blue - (detailSource[i - 2] + detailSource[i + 6] + detailSource[i - stride + 2] + detailSource[i + stride + 2]) / 4) * .55;
+              }
+              red *= exposure;
+              green *= exposure;
+              blue *= exposure;
+              const luminance = .2126 * red + .7152 * green + .0722 * blue;
+              const shadowWeight = 1 - luminance / 255;
+              const highlightWeight = luminance / 255;
+              const tonal = shadows * shadowWeight * 43 + highlights * highlightWeight * 43;
+              red += tonal + warmth;
+              green += tonal * .35;
+              blue += tonal - warmth;
+              red = (red - 128) * contrast + 128;
+              green = (green - 128) * contrast + 128;
+              blue = (blue - 128) * contrast + 128;
+              const gray = .2126 * red + .7152 * green + .0722 * blue;
+              pixels[i] = Math.max(0, Math.min(255, gray + (red - gray) * saturation));
+              pixels[i + 1] = Math.max(0, Math.min(255, gray + (green - gray) * saturation));
+              pixels[i + 2] = Math.max(0, Math.min(255, gray + (blue - gray) * saturation));
+            }
+          }
+          outputContext.putImageData(frame, 0, 0);
+          if (edit.vignetteAmount > 0) {
+            const radius = Math.hypot(outputCanvas.width, outputCanvas.height) * .7;
+            const gradient = outputContext.createRadialGradient(outputCanvas.width / 2, outputCanvas.height / 2, radius * .28, outputCanvas.width / 2, outputCanvas.height / 2, radius);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, `rgba(0,0,0,${edit.vignetteAmount / 100})`);
+            outputContext.fillStyle = gradient;
+            outputContext.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+          }
+          outputCanvas.toBlob(blob => {
+            if (!blob) { showToast('Could not export this photo.'); return; }
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `${activePhoto.name.replace(/\.[^.]+$/, '')}${enhanceMode ? '_clikz_6k' : '_clikz'}.png`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('Edited photo saved to your downloads.');
+          }, 'image/png');
+        };
+        source.onerror = () => showToast('Could not read this photo. Try opening it again.');
+        source.src = activePhoto.url;
+      });
+    })();
+  </script>
+</body>
+</html>
